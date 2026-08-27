@@ -295,9 +295,13 @@ const firebaseConfig = {
   messagingSenderId: "13121909733",
   appId: "1:13121909733:web:9ddb97fa615a611cf5f50c",
 };
-firebase.initializeApp(firebaseConfig);
-const auth = firebase.auth();
-const db = firebase.firestore();
+// Named app instance so this portal's login session is fully isolated from
+// the patient app's session, even though both live on ejwii.github.io.
+// Without this, logging into one silently logs you into the other, since
+// browsers share auth storage per-website, not per-folder.
+const institutionApp = firebase.initializeApp(firebaseConfig, 'institutionPortal');
+const auth = institutionApp.auth();
+const db = institutionApp.firestore();
 
 let currentInstitution = null; // { id, name, sector, district, adminEmail, ... }
 let unsubscribeSubmissions = null;
