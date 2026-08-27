@@ -1046,6 +1046,7 @@ async function doSubmit() {
   const sub = {
     ref, type: state.type, typeLabel: cfg.label, typeColor: cfg.color, typeBg: cfg.bg,
     hcId: state.hcId, hcName: state.hcName, text,
+    patientName: (currentUser.firstName + ' ' + currentUser.lastName).trim() || 'Anonymous patient',
     date: now.toLocaleDateString('en-RW',{year:'numeric',month:'long',day:'numeric'}),
     time: now.toLocaleTimeString('en-RW',{hour:'2-digit',minute:'2-digit'}),
     status: 'Received — Under review',
