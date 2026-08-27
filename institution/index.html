@@ -498,7 +498,7 @@ function getPageContent(page) {
             <span style="font-size:11px;color:var(--gray-400);margin-left:auto;">${timeAgo(c)}</span>
           </div>
           <div class="feedback-text">${c.text}</div>
-          <div style="font-size:11px;color:var(--gray-400);margin-bottom:8px;">Ref: ${c.ref || '—'}</div>
+          <div style="font-size:11px;color:var(--gray-400);margin-bottom:8px;">From: <strong style="color:var(--gray-600);">${c.patientName || 'Anonymous patient'}</strong> · Ref: ${c.ref || '—'}</div>
           <div style="display:flex;justify-content:flex-end;gap:6px;">
             <button class="btn-sm btn-outline" onclick="updateSubmissionStatus('${c.id}','In Progress')">Mark In Progress</button>
             <button class="btn-sm btn-blue" onclick="updateSubmissionStatus('${c.id}','Reviewed')">Mark Reviewed</button>
@@ -516,6 +516,7 @@ function getPageContent(page) {
             <span style="font-size:11px;color:var(--gray-400);margin-left:auto;">${timeAgo(i)}</span>
           </div>
           <div class="feedback-text">${i.text}</div>
+          <div style="font-size:11px;color:var(--gray-400);margin-bottom:4px;">From: <strong style="color:var(--gray-600);">${i.patientName || 'Anonymous patient'}</strong></div>
           <div style="display:flex;justify-content:flex-end;margin-top:8px;">
             <button class="btn-sm btn-outline" onclick="updateSubmissionStatus('${i.id}','Reviewed')">Acknowledge</button>
           </div>
@@ -536,6 +537,7 @@ function getPageContent(page) {
             <span style="font-size:11px;color:var(--gray-400);margin-left:auto;">${timeAgo(c)}</span>
           </div>
           <div class="feedback-text">"${c.text}"</div>
+          <div style="font-size:11px;color:var(--gray-400);">From: <strong style="color:var(--gray-600);">${c.patientName || 'Anonymous patient'}</strong></div>
         </div>`).join('')}
     </div>`;
   }
