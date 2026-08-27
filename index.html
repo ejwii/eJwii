@@ -1028,12 +1028,21 @@ function onTextInput(el) {
 
 // ══════════════ CONFIRM ══════════════
 function renderConfirm() {
+  if (!currentUser) {
+    // Session dropped somehow — send them back to log in rather than crash.
+    alert('Your session expired — please log in again to continue.');
+    goTo('login');
+    return;
+  }
   const cfg = typeConfig[state.type];
   const text = state.selectedOption || state.customText || '(no text entered)';
   document.getElementById('cType').innerHTML = `<span class="confirm-tag" style="background:${cfg.bg};color:${cfg.color};">${cfg.label}</span>`;
   document.getElementById('cHC').textContent = state.hcName;
   document.getElementById('cText').textContent = text;
-  document.getElementById('cName').textContent = currentUser.firstName + ' ' + currentUser.lastName + ' · ' + currentUser.email;
+  const displayName = (currentUser.firstName || currentUser.lastName)
+    ? (currentUser.firstName + ' ' + currentUser.lastName).trim()
+    : currentUser.email;
+  document.getElementById('cName').textContent = displayName + ' · ' + currentUser.email;
   document.getElementById('submitBtn').className = 'btn-main ' + cfg.btnClass;
   const flowEl = document.getElementById('cFlowInstitution');
   if (flowEl) flowEl.textContent = state.hcName || 'this institution';
@@ -1041,6 +1050,11 @@ function renderConfirm() {
 
 // ══════════════ SUBMIT ══════════════
 async function doSubmit() {
+  if (!currentUser) {
+    alert('Your session expired — please log in again to continue.');
+    goTo('login');
+    return;
+  }
   const btn = document.getElementById('submitBtn');
   const ref = 'VH-' + new Date().getFullYear() + '-' + Math.floor(Math.random()*9000+1000);
   const text = state.selectedOption || state.customText || '(no text)';
@@ -1050,7 +1064,7 @@ async function doSubmit() {
   const sub = {
     ref, type: state.type, typeLabel: cfg.label, typeColor: cfg.color, typeBg: cfg.bg,
     hcId: state.hcId, hcName: state.hcName, text,
-    patientName: (currentUser.firstName + ' ' + currentUser.lastName).trim() || 'Anonymous patient',
+    patientName: (currentUser.firstName + ' ' + currentUser.lastName).trim() || currentUser.email || 'Anonymous patient',
     date: now.toLocaleDateString('en-RW',{year:'numeric',month:'long',day:'numeric'}),
     time: now.toLocaleTimeString('en-RW',{hour:'2-digit',minute:'2-digit'}),
     status: 'Received — Under review',
