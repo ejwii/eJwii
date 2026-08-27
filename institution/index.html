@@ -1,0 +1,597 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>eJwi — Institution Portal</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --navy-deep: #0a1628;
+  --navy-mid: #0f2744;
+  --navy-line: #16324f;
+  --blue: #1e5aa8;
+  --blue-light: #2f74cc;
+  --blue-pale: #eef3fb;
+  --gold: #c8953a;
+  --gold-light: #ddb266;
+  --red: #c0392b;
+  --red-pale: #fdf0ee;
+  --green: #1a6b3c;
+  --green-pale: #e8f5ee;
+  --gray-50: #f7f8fa;
+  --gray-100: #f0f2f5;
+  --gray-200: #e4e8ee;
+  --gray-400: #9aa5b1;
+  --gray-600: #5b6774;
+  --gray-800: #2b3542;
+  --gray-900: #16202c;
+  --white: #ffffff;
+  --shadow-sm: 0 1px 3px rgba(10,22,40,0.08);
+  --shadow: 0 4px 20px rgba(10,22,40,0.10);
+  --shadow-lg: 0 12px 40px rgba(10,22,40,0.18);
+  --radius: 12px;
+  --radius-sm: 8px;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: 'DM Sans', sans-serif; background: var(--gray-50); color: var(--gray-900); min-height: 100vh; }
+button, input, select, textarea { font-family: inherit; }
+:focus-visible { outline: 2px solid var(--blue); outline-offset: 2px; }
+
+.screen { display: none; min-height: 100vh; }
+.screen.active { display: flex; flex-direction: column; }
+
+/* ===================== LOGIN ===================== */
+#login {
+  background: linear-gradient(160deg, var(--navy-deep) 0%, var(--navy-mid) 60%, #0c1f37 100%);
+  justify-content: center; align-items: center;
+  position: relative; overflow: hidden; padding: 24px;
+}
+#login::before {
+  content: '';
+  position: absolute; inset: 0;
+  background: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='0.025'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+}
+.login-box {
+  position: relative; z-index: 1;
+  background: rgba(255,255,255,0.04);
+  border: 1px solid rgba(255,255,255,0.10);
+  backdrop-filter: blur(6px);
+  border-radius: 18px; padding: 40px; width: 100%; max-width: 420px;
+  box-shadow: var(--shadow-lg);
+}
+.login-seal {
+  width: 52px; height: 52px; border-radius: 14px;
+  background: linear-gradient(135deg, var(--gold) 0%, var(--gold-light) 100%);
+  display: flex; align-items: center; justify-content: center; font-size: 24px;
+  margin-bottom: 20px; box-shadow: 0 4px 14px rgba(200,149,58,0.35);
+}
+.login-eyebrow { color: rgba(255,255,255,0.5); font-size: 11px; text-transform: uppercase; letter-spacing: 2px; margin-bottom: 8px; font-weight: 600; }
+.login-title { font-family: 'DM Serif Display', serif; font-size: 26px; color: #fff; margin-bottom: 6px; }
+.login-institution { color: var(--gold-light); font-size: 14px; margin-bottom: 28px; font-style: italic; }
+.form-group { margin-bottom: 18px; }
+.form-group label { display: block; font-size: 12px; font-weight: 600; letter-spacing: 0.3px; color: rgba(255,255,255,0.65); margin-bottom: 7px; }
+.form-group input, .form-group select {
+  width: 100%; padding: 12px 14px;
+  border: 1.5px solid rgba(255,255,255,0.14); border-radius: var(--radius-sm);
+  font-size: 14px; color: #fff; background: rgba(255,255,255,0.06);
+  outline: none; transition: border-color 0.2s, background 0.2s;
+}
+.form-group input::placeholder { color: rgba(255,255,255,0.30); }
+.form-group input:focus, .form-group select:focus { border-color: var(--gold); background: rgba(255,255,255,0.10); }
+.form-group select option { color: #111; }
+.btn-login {
+  width: 100%; padding: 14px;
+  background: var(--gold); color: #14202f;
+  border: none; border-radius: var(--radius-sm);
+  font-size: 15px; font-weight: 700;
+  cursor: pointer; transition: background 0.2s, transform 0.15s; margin-top: 6px;
+  letter-spacing: 0.2px;
+}
+.btn-login:hover { background: var(--gold-light); transform: translateY(-1px); }
+.login-note { text-align: center; color: rgba(255,255,255,0.35); font-size: 11.5px; margin-top: 18px; line-height: 1.5; }
+.login-note strong { color: rgba(255,255,255,0.55); }
+
+/* ===================== APP SHELL ===================== */
+#app { flex-direction: row; }
+.sidebar {
+  width: 250px; background: var(--navy-deep); border-right: 1px solid var(--navy-line);
+  display: flex; flex-direction: column; flex-shrink: 0; height: 100vh; position: sticky; top: 0;
+}
+.sidebar-header { padding: 22px 20px 18px; border-bottom: 1px solid var(--navy-line); }
+.sidebar-logo { display: flex; align-items: center; gap: 10px; margin-bottom: 14px; }
+.sidebar-logo-icon {
+  width: 32px; height: 32px; border-radius: 9px;
+  background: linear-gradient(135deg, var(--gold) 0%, var(--gold-light) 100%);
+  display: flex; align-items: center; justify-content: center; font-size: 16px;
+}
+.sidebar-logo-name { font-family: 'DM Serif Display', serif; font-size: 17px; color: #fff; }
+.sidebar-institution-name { font-size: 13.5px; font-weight: 600; color: rgba(255,255,255,0.92); line-height: 1.35; margin-bottom: 6px; }
+.sidebar-badge { font-size: 10.5px; font-weight: 700; text-transform: uppercase; letter-spacing: 1.2px; padding: 4px 10px; border-radius: 20px; display: inline-block; background: rgba(200,149,58,0.16); color: var(--gold-light); }
+.sidebar-nav { flex: 1; padding: 14px 12px; overflow-y: auto; }
+.nav-item {
+  display: flex; align-items: center; gap: 11px;
+  padding: 10px 12px; border-radius: 8px;
+  color: rgba(255,255,255,0.62); font-size: 13.5px; font-weight: 500;
+  cursor: pointer; transition: all 0.15s; border: none; background: none;
+  width: 100%; text-align: left; margin-bottom: 3px;
+}
+.nav-item:hover { background: rgba(255,255,255,0.05); color: #fff; }
+.nav-item.active { background: rgba(30,90,168,0.35); color: #fff; font-weight: 600; box-shadow: inset 3px 0 0 var(--gold); }
+.nav-item .nav-icon { font-size: 16px; width: 20px; text-align: center; }
+.sidebar-footer { padding: 16px 20px; border-top: 1px solid var(--navy-line); }
+.user-info { display: flex; align-items: center; gap: 10px; }
+.user-avatar { width: 34px; height: 34px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 12.5px; font-weight: 700; color: #fff; background: var(--blue); flex-shrink: 0; }
+.user-name { font-size: 13px; font-weight: 600; color: #fff; }
+.user-role { font-size: 11px; color: rgba(255,255,255,0.45); }
+.btn-logout { margin-left: auto; background: none; border: none; color: rgba(255,255,255,0.4); cursor: pointer; font-size: 16px; padding: 4px; }
+.btn-logout:hover { color: var(--red); }
+
+.main-content { flex: 1; overflow-y: auto; padding: 30px 32px; max-width: 1180px; }
+.page { display: none; }
+.page.active { display: block; }
+.page-header { margin-bottom: 26px; display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
+.page-header h1 { font-family: 'DM Serif Display', serif; font-size: 27px; color: var(--gray-900); margin-bottom: 4px; }
+.page-header p { color: var(--gray-600); font-size: 14px; }
+
+/* ===================== STAT CARDS ===================== */
+.stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 16px; margin-bottom: 26px; }
+.stat-card { background: #fff; border-radius: var(--radius); padding: 20px; box-shadow: var(--shadow-sm); border: 1px solid var(--gray-200); }
+.stat-card .stat-icon { font-size: 21px; margin-bottom: 10px; }
+.stat-card .stat-value { font-size: 27px; font-weight: 700; color: var(--gray-900); font-family: 'DM Serif Display', serif; }
+.stat-card .stat-label { font-size: 12px; color: var(--gray-600); margin-top: 2px; }
+.stat-card .stat-change { font-size: 11px; margin-top: 7px; font-weight: 600; }
+.stat-change.up { color: var(--green); }
+.stat-change.down { color: var(--red); }
+.stat-change.neutral { color: var(--gray-400); }
+
+/* ===================== CARDS ===================== */
+.card { background: #fff; border-radius: var(--radius); padding: 22px; box-shadow: var(--shadow-sm); border: 1px solid var(--gray-200); margin-bottom: 20px; }
+.card-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; gap: 10px; flex-wrap: wrap; }
+.card-title { font-size: 15px; font-weight: 700; color: var(--gray-900); }
+.two-col { display: grid; grid-template-columns: 1.1fr 1fr; gap: 20px; }
+@media(max-width:900px) { .two-col { grid-template-columns: 1fr; } }
+
+/* ===================== BADGES ===================== */
+.badge { display: inline-flex; align-items: center; gap: 4px; padding: 3px 10px; border-radius: 20px; font-size: 11px; font-weight: 600; }
+.badge-complaint { background: var(--red-pale); color: var(--red); }
+.badge-compliment { background: var(--green-pale); color: var(--green); }
+.badge-idea { background: var(--blue-pale); color: var(--blue); }
+.badge-pending { background: #fdf3e2; color: #a06c1a; }
+.badge-reviewed { background: var(--green-pale); color: var(--green); }
+.badge-progress { background: var(--blue-pale); color: var(--blue); }
+
+/* ===================== FEEDBACK LIST ===================== */
+.feedback-item { padding: 15px 0; border-bottom: 1px solid var(--gray-100); }
+.feedback-item:last-child { border-bottom: none; }
+.feedback-item-top { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; flex-wrap: wrap; }
+.feedback-text { font-size: 14px; color: var(--gray-800); line-height: 1.55; margin-bottom: 9px; }
+.feedback-meta { font-size: 11.5px; color: var(--gray-400); display: flex; gap: 14px; flex-wrap: wrap; }
+.vote-bar { height: 4px; background: var(--gray-100); border-radius: 2px; margin: 7px 0 5px; }
+.vote-fill { height: 100%; border-radius: 2px; }
+.vote-count { font-size: 11.5px; color: var(--gray-600); font-weight: 600; }
+.btn-sm { padding: 6px 13px; border-radius: 7px; font-size: 12px; font-weight: 600; cursor: pointer; border: none; transition: all 0.15s; }
+.btn-blue { background: var(--blue); color: #fff; }
+.btn-blue:hover { background: var(--blue-light); }
+.btn-outline { background: transparent; border: 1.5px solid var(--gray-200); color: var(--gray-700); }
+.btn-outline:hover { border-color: var(--blue); color: var(--blue); }
+.btn-outline.active-filter { border-color: var(--blue); color: var(--blue); background: var(--blue-pale); }
+
+/* ===================== FORM ===================== */
+.form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+@media(max-width:640px){ .form-row { grid-template-columns: 1fr; } }
+.card .form-group label { color: var(--gray-800); font-size: 13px; }
+.card .form-group input, .card .form-group select, .card .form-group textarea {
+  background: #fff; color: var(--gray-900); border: 1.5px solid var(--gray-200);
+}
+.card .form-group input::placeholder, .card .form-group textarea::placeholder { color: var(--gray-400); }
+.card .form-group input:focus, .card .form-group select:focus, .card .form-group textarea:focus { border-color: var(--blue); }
+.form-group textarea { width: 100%; padding: 12px 14px; border-radius: var(--radius-sm); font-size: 14px; outline: none; resize: vertical; min-height: 90px; }
+.btn-primary { padding: 12px 22px; background: var(--blue); color: #fff; border: none; border-radius: var(--radius-sm); font-size: 14px; font-weight: 600; cursor: pointer; transition: background 0.2s; }
+.btn-primary:hover { background: var(--blue-light); }
+
+/* ===================== ALERT ===================== */
+.alert { padding: 12px 16px; border-radius: 8px; font-size: 13px; margin-bottom: 16px; display: flex; align-items: center; gap: 10px; }
+.alert-info { background: var(--blue-pale); color: var(--blue); }
+.alert-success { background: var(--green-pale); color: var(--green); }
+.alert-warn { background: #fdf3e2; color: #a06c1a; }
+
+/* ===================== EMPTY STATE ===================== */
+.empty-state { text-align: center; padding: 40px 20px; color: var(--gray-400); }
+.empty-state .empty-icon { font-size: 34px; margin-bottom: 10px; }
+.empty-state p { font-size: 13.5px; }
+
+/* ===================== MODAL ===================== */
+.modal-overlay { display: none; position: fixed; inset: 0; background: rgba(10,22,40,0.55); z-index: 100; justify-content: center; align-items: center; padding: 20px; }
+.modal-overlay.open { display: flex; }
+.modal { background: #fff; border-radius: 16px; padding: 30px; max-width: 460px; width: 100%; box-shadow: var(--shadow-lg); }
+.modal h2 { font-family: 'DM Serif Display', serif; font-size: 21px; margin-bottom: 12px; color: var(--gray-900); }
+.modal p { color: var(--gray-600); font-size: 13.5px; line-height: 1.6; margin-bottom: 22px; }
+.modal-actions { display: flex; gap: 10px; justify-content: flex-end; }
+.btn-ghost { background: var(--gray-100); color: var(--gray-700); border: none; padding: 10px 18px; border-radius: var(--radius-sm); font-size: 13px; font-weight: 600; cursor: pointer; }
+.btn-ghost:hover { background: var(--gray-200); }
+</style>
+</head>
+<body>
+
+<!-- ===== LOGIN ===== -->
+<div id="login" class="screen active">
+  <div class="login-box">
+    <div class="login-seal">🏥</div>
+    <div class="login-eyebrow">Institution Portal · By Invitation</div>
+    <div class="login-title">Sign in to eJwi</div>
+    <div class="login-institution" id="loginInstitutionHint">Private institution access</div>
+    <div id="loginError" style="display:none;background:rgba(192,57,43,0.15);border:1px solid rgba(192,57,43,0.4);color:#ff9d91;padding:10px 14px;border-radius:8px;font-size:12.5px;margin-bottom:16px;"></div>
+    <div class="form-group">
+      <label>Registered Email</label>
+      <input type="email" placeholder="admin@yourclinic.rw" id="loginEmail">
+    </div>
+    <div class="form-group">
+      <label>Password</label>
+      <input type="password" placeholder="••••••••" id="loginPassword">
+    </div>
+    <button class="btn-login" id="loginBtn" onclick="doLogin()">Sign In →</button>
+    <div class="login-note">This portal is private to your institution.<br>Access was shared with you directly by eJwi — do not forward this link.</div>
+  </div>
+</div>
+
+<!-- ===== APP SHELL ===== -->
+<div id="app" class="screen">
+  <div class="sidebar">
+    <div class="sidebar-header">
+      <div class="sidebar-logo">
+        <div class="sidebar-logo-icon">🏥</div>
+        <div class="sidebar-logo-name">eJwi</div>
+      </div>
+      <div class="sidebar-institution-name" id="sidebarInstitutionName">Loading…</div>
+      <span class="sidebar-badge">Institution Admin</span>
+    </div>
+    <nav class="sidebar-nav" id="sidebarNav"></nav>
+    <div class="sidebar-footer">
+      <div class="user-info">
+        <div class="user-avatar" id="sidebarAvatar">•</div>
+        <div>
+          <div class="user-name" id="sidebarUserEmail">—</div>
+          <div class="user-role">Institution Admin</div>
+        </div>
+        <button class="btn-logout" onclick="logout()" title="Sign out">⏻</button>
+      </div>
+    </div>
+  </div>
+  <div class="main-content" id="mainContent"></div>
+</div>
+
+<!-- ===== MODAL ===== -->
+<div class="modal-overlay" id="modalOverlay">
+  <div class="modal">
+    <h2 id="modalTitle"></h2>
+    <p id="modalBody"></p>
+    <div class="modal-actions">
+      <button class="btn-ghost" onclick="closeModal()">Cancel</button>
+      <button class="btn-primary" onclick="closeModal()">Confirm</button>
+    </div>
+  </div>
+</div>
+
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+<script>
+const NAV = [
+  { icon:'📊', label:'Dashboard', page:'dashboard' },
+  { icon:'📋', label:'Feedback Inbox', page:'feedback' },
+  { icon:'😊', label:'Compliments', page:'compliments' },
+  { icon:'📝', label:'Internal Report', page:'report' },
+  { icon:'⚙️', label:'Settings', page:'settings' },
+];
+
+// ══════════════ FIREBASE INIT (same project as the patient app) ══════════════
+const firebaseConfig = {
+  apiKey: "AIzaSyBMxV9JC5ODp8LS4P6vFG5NGGHlTbkAnwA",
+  authDomain: "ejwi-f2f1a.firebaseapp.com",
+  projectId: "ejwi-f2f1a",
+  storageBucket: "ejwi-f2f1a.firebasestorage.app",
+  messagingSenderId: "13121909733",
+  appId: "1:13121909733:web:9ddb97fa615a611cf5f50c",
+};
+firebase.initializeApp(firebaseConfig);
+const auth = firebase.auth();
+const db = firebase.firestore();
+
+let currentInstitution = null; // { id, name, sector, district, adminEmail, ... }
+let unsubscribeSubmissions = null;
+let allSubmissions = []; // live submissions for this institution only
+let currentPage = 'dashboard';
+
+// ══════════════ LOGIN ══════════════
+async function doLogin() {
+  const email = document.getElementById('loginEmail').value.trim();
+  const password = document.getElementById('loginPassword').value;
+  const errBox = document.getElementById('loginError');
+  const btn = document.getElementById('loginBtn');
+  errBox.style.display = 'none';
+
+  if (!email || !password) {
+    errBox.textContent = 'Enter both your email and password.';
+    errBox.style.display = 'block';
+    return;
+  }
+
+  btn.disabled = true; btn.textContent = 'Signing in…';
+  try {
+    await auth.signInWithEmailAndPassword(email, password);
+    // onAuthStateChanged below picks it up from here
+  } catch (e) {
+    console.error('Login failed:', e);
+    errBox.textContent = 'Could not sign in — check your email and password.';
+    errBox.style.display = 'block';
+    btn.disabled = false; btn.textContent = 'Sign In →';
+  }
+}
+
+auth.onAuthStateChanged(async (user) => {
+  const btn = document.getElementById('loginBtn');
+  if (!user) {
+    currentInstitution = null;
+    if (unsubscribeSubmissions) { unsubscribeSubmissions(); unsubscribeSubmissions = null; }
+    document.getElementById('app').classList.remove('active');
+    document.getElementById('login').classList.add('active');
+    if (btn) { btn.disabled = false; btn.textContent = 'Sign In →'; }
+    return;
+  }
+
+  try {
+    const snap = await db.collection('institutions').where('adminEmail', '==', user.email).limit(1).get();
+    if (snap.empty) {
+      document.getElementById('loginError').textContent = 'This email is not linked to any institution account yet.';
+      document.getElementById('loginError').style.display = 'block';
+      await auth.signOut();
+      if (btn) { btn.disabled = false; btn.textContent = 'Sign In →'; }
+      return;
+    }
+    const doc = snap.docs[0];
+    currentInstitution = { id: doc.id, ...doc.data() };
+
+    document.getElementById('sidebarInstitutionName').textContent = currentInstitution.name || 'Institution';
+    document.getElementById('sidebarUserEmail').textContent = user.email;
+    document.getElementById('sidebarAvatar').textContent = (user.email || '?').charAt(0).toUpperCase();
+
+    document.getElementById('login').classList.remove('active');
+    document.getElementById('app').classList.add('active');
+    if (btn) { btn.disabled = false; btn.textContent = 'Sign In →'; }
+
+    const nav = document.getElementById('sidebarNav');
+    nav.innerHTML = '';
+    NAV.forEach((item, i) => {
+      nav.innerHTML += `<button class="nav-item${i===0?' active':''}" onclick="loadPage('${item.page}', this)">
+        <span class="nav-icon">${item.icon}</span> ${item.label}
+      </button>`;
+    });
+
+    listenForSubmissions();
+    loadPage('dashboard');
+  } catch (e) {
+    console.error('Failed to load institution:', e);
+    document.getElementById('loginError').textContent = 'Something went wrong loading your institution. Try again.';
+    document.getElementById('loginError').style.display = 'block';
+    if (btn) { btn.disabled = false; btn.textContent = 'Sign In →'; }
+  }
+});
+
+function logout() {
+  auth.signOut();
+}
+
+// ══════════════ LIVE DATA ══════════════
+function listenForSubmissions() {
+  if (unsubscribeSubmissions) unsubscribeSubmissions();
+  unsubscribeSubmissions = db.collection('submissions')
+    .where('hcId', '==', currentInstitution.id)
+    .onSnapshot(snap => {
+      allSubmissions = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+      allSubmissions.sort((a,b) => (b.createdAt?.seconds||0) - (a.createdAt?.seconds||0));
+      // Re-render whatever page is currently open so it stays live
+      loadPage(currentPage);
+    }, err => {
+      console.error('Failed to load submissions:', err);
+    });
+}
+
+function byType(type) { return allSubmissions.filter(s => s.type === type); }
+function timeAgo(sub) {
+  if (!sub.createdAt || !sub.createdAt.seconds) return sub.date || '';
+  const diffMs = Date.now() - sub.createdAt.seconds * 1000;
+  const mins = Math.floor(diffMs / 60000);
+  if (mins < 60) return mins <= 1 ? 'just now' : mins + 'm ago';
+  const hrs = Math.floor(mins / 60);
+  if (hrs < 24) return hrs + 'h ago';
+  const days = Math.floor(hrs / 24);
+  return days + 'd ago';
+}
+
+async function updateSubmissionStatus(id, newStatus) {
+  try {
+    await db.collection('submissions').doc(id).update({ status: newStatus });
+  } catch (e) {
+    console.error('Failed to update status:', e);
+  }
+}
+
+function loadPage(pageId, el) {
+  currentPage = pageId;
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  if (el) el.classList.add('active');
+  else { const btn = [...document.querySelectorAll('.nav-item')].find(b => b.textContent.trim().toLowerCase().includes(pageId)); if (btn) btn.classList.add('active'); }
+  document.getElementById('mainContent').innerHTML = getPageContent(pageId);
+}
+
+function statusBadge(status) {
+  if (status === 'Received — Under review' || status === 'Pending') return `<span class="badge badge-pending">⏳ Pending</span>`;
+  if (status === 'In Progress') return `<span class="badge badge-progress">🔄 In Progress</span>`;
+  return `<span class="badge badge-reviewed">✅ Reviewed</span>`;
+}
+
+function getPageContent(page) {
+  const complaints = byType('complaint');
+  const ideas = byType('idea');
+  const compliments = byType('compliment');
+  const instName = currentInstitution ? currentInstitution.name : 'Your Institution';
+
+  if (page === 'dashboard') {
+    const total = allSubmissions.length;
+    const maxVotes = 1; // no voting field yet on real submissions
+    return `
+    <div class="page-header">
+      <div><h1>${instName}</h1><p>Institution Dashboard — ${new Date().toLocaleDateString('en-RW',{weekday:'long',year:'numeric',month:'long',day:'numeric'})}</p></div>
+    </div>
+    <div class="stats-grid">
+      <div class="stat-card"><div class="stat-icon">📋</div><div class="stat-value">${total}</div><div class="stat-label">Total Submissions</div></div>
+      <div class="stat-card"><div class="stat-icon">😔</div><div class="stat-value">${complaints.length}</div><div class="stat-label">Complaints</div></div>
+      <div class="stat-card"><div class="stat-icon">😊</div><div class="stat-value">${compliments.length}</div><div class="stat-label">Compliments</div></div>
+      <div class="stat-card"><div class="stat-icon">💡</div><div class="stat-value">${ideas.length}</div><div class="stat-label">Ideas</div></div>
+    </div>
+    <div class="two-col">
+      <div class="card">
+        <div class="card-header"><div class="card-title">Recent Complaints</div></div>
+        ${complaints.length === 0 ? `<div class="empty-state"><div class="empty-icon">🎉</div><p>No complaints yet.</p></div>` :
+          complaints.slice(0,5).map(c => `
+          <div class="feedback-item">
+            <div class="feedback-item-top">${statusBadge(c.status)}<span style="font-size:11px;color:var(--gray-400);margin-left:auto;">${timeAgo(c)}</span></div>
+            <div class="feedback-text">${c.text}</div>
+          </div>`).join('')}
+      </div>
+      <div class="card">
+        <div class="card-header"><div class="card-title">Response Status</div></div>
+        <div class="alert alert-info">📌 ${complaints.filter(c=>c.status==='Received — Under review'||c.status==='Pending').length} complaints awaiting your first response</div>
+        <div style="display:flex;justify-content:space-between;padding:9px 0;border-bottom:1px solid var(--gray-100);font-size:13px;">
+          <span style="color:var(--gray-700);">Complaints reviewed</span>
+          <span style="font-weight:600;color:var(--green);">${complaints.filter(c=>c.status==='Reviewed').length}/${complaints.length||0}</span>
+        </div>
+        <button class="btn-primary" style="width:100%;margin-top:16px;" onclick="loadPage('feedback')">Go to Feedback Inbox →</button>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-header"><div class="card-title">Recent Activity</div></div>
+      ${allSubmissions.length === 0 ? `<div class="empty-state"><div class="empty-icon">📭</div><p>No submissions yet — nothing to show here.</p></div>` :
+        allSubmissions.slice(0,5).map(s => {
+          const icon = s.type === 'complaint' ? '😔' : s.type === 'compliment' ? '😊' : '💡';
+          return `<div class="feedback-item">
+            <div class="feedback-item-top"><span class="badge badge-${s.type}">${icon} ${s.type.charAt(0).toUpperCase()+s.type.slice(1)}</span><span style="font-size:11px;color:var(--gray-400);margin-left:auto;">${timeAgo(s)}</span></div>
+            <div class="feedback-text">${s.text}</div>
+          </div>`;
+        }).join('')}
+    </div>`;
+  }
+
+  if (page === 'feedback') {
+    return `
+    <div class="page-header"><div><h1>Feedback Inbox</h1><p>Patient complaints and ideas — review, respond, resolve</p></div></div>
+    <div class="card">
+      <div class="card-header"><div class="card-title">Complaints (${complaints.length})</div></div>
+      ${complaints.length === 0 ? `<div class="empty-state"><div class="empty-icon">🎉</div><p>No complaints yet.</p></div>` :
+        complaints.map(c => `
+        <div class="feedback-item">
+          <div class="feedback-item-top">
+            <span class="badge badge-complaint">😔 Complaint</span>
+            ${statusBadge(c.status)}
+            <span style="font-size:11px;color:var(--gray-400);margin-left:auto;">${timeAgo(c)}</span>
+          </div>
+          <div class="feedback-text">${c.text}</div>
+          <div style="font-size:11px;color:var(--gray-400);margin-bottom:8px;">Ref: ${c.ref || '—'}</div>
+          <div style="display:flex;justify-content:flex-end;gap:6px;">
+            <button class="btn-sm btn-outline" onclick="updateSubmissionStatus('${c.id}','In Progress')">Mark In Progress</button>
+            <button class="btn-sm btn-blue" onclick="updateSubmissionStatus('${c.id}','Reviewed')">Mark Reviewed</button>
+          </div>
+        </div>`).join('')}
+    </div>
+    <div class="card">
+      <div class="card-header"><div class="card-title">Ideas (${ideas.length})</div></div>
+      ${ideas.length === 0 ? `<div class="empty-state"><div class="empty-icon">💡</div><p>No ideas submitted yet.</p></div>` :
+        ideas.map(i => `
+        <div class="feedback-item">
+          <div class="feedback-item-top">
+            <span class="badge badge-idea">💡 Idea</span>
+            ${statusBadge(i.status)}
+            <span style="font-size:11px;color:var(--gray-400);margin-left:auto;">${timeAgo(i)}</span>
+          </div>
+          <div class="feedback-text">${i.text}</div>
+          <div style="display:flex;justify-content:flex-end;margin-top:8px;">
+            <button class="btn-sm btn-outline" onclick="updateSubmissionStatus('${i.id}','Reviewed')">Acknowledge</button>
+          </div>
+        </div>`).join('')}
+    </div>`;
+  }
+
+  if (page === 'compliments') {
+    return `
+    <div class="page-header"><div><h1>Compliments</h1><p>Positive feedback from patients — worth sharing with your team</p></div></div>
+    <div class="card">
+      <div class="card-header"><div class="card-title">Patient Compliments (${compliments.length})</div></div>
+      ${compliments.length === 0 ? `<div class="empty-state"><div class="empty-icon">😊</div><p>No compliments yet — they'll show up here as patients send them.</p></div>` :
+        compliments.map(c => `
+        <div class="feedback-item">
+          <div class="feedback-item-top">
+            <span class="badge badge-compliment">😊 Compliment</span>
+            <span style="font-size:11px;color:var(--gray-400);margin-left:auto;">${timeAgo(c)}</span>
+          </div>
+          <div class="feedback-text">"${c.text}"</div>
+        </div>`).join('')}
+    </div>`;
+  }
+
+  if (page === 'report') {
+    return `
+    <div class="page-header"><div><h1>Internal Report</h1><p>Summarize this month's feedback for your own records or board — nothing here is sent externally</p></div></div>
+    <div class="card">
+      <div class="alert alert-info">📁 This report stays within your institution. Use it for staff meetings or your own tracking — eJwi does not forward it anywhere.</div>
+      <div class="card-title" style="margin-bottom:16px;">Reporting Period: ${new Date().toLocaleDateString('en-RW',{year:'numeric',month:'long'})}</div>
+      <div class="form-row">
+        <div class="form-group"><label>Institution</label><input value="${instName}" readonly></div>
+        <div class="form-group"><label>Prepared By</label><input placeholder="Name of person preparing this report"></div>
+      </div>
+      <div class="form-group"><label>Summary of Major Complaints</label><textarea placeholder="Summarize the top complaints raised this month and actions taken...">${complaints.slice(0,5).map(c=>'• '+c.text).join('\n')}</textarea></div>
+      <div class="form-group"><label>Actions Taken</label><textarea placeholder="List specific actions the clinic has taken in response to patient feedback..."></textarea></div>
+      <div class="form-group"><label>Compliments / Positive Feedback Summary</label><textarea placeholder="Summarize positive feedback from patients this month...">${compliments.slice(0,5).map(c=>'• '+c.text).join('\n')}</textarea></div>
+      <div style="display:flex;gap:10px;margin-top:8px;">
+        <button class="btn-primary" onclick="showModal('Save Report','This report is for your own internal use — copy or print it for your records.')">Save Report</button>
+      </div>
+    </div>`;
+  }
+
+  if (page === 'settings') {
+    return `
+    <div class="page-header"><div><h1>Settings</h1><p>Manage your institution profile and account</p></div></div>
+    <div class="card">
+      <div class="card-title" style="margin-bottom:16px;">Institution Information</div>
+      <div class="form-row">
+        <div class="form-group"><label>Institution Name</label><input value="${currentInstitution.name || ''}" readonly></div>
+        <div class="form-group"><label>Sector</label><input value="${currentInstitution.sector || ''}" readonly></div>
+      </div>
+      <div class="form-row">
+        <div class="form-group"><label>District</label><input value="${currentInstitution.district || ''}" readonly></div>
+      </div>
+      <div class="alert alert-info">To update institution details, contact the eJwi team directly.</div>
+    </div>
+    <div class="card">
+      <div class="card-title" style="margin-bottom:16px;">Account</div>
+      <div class="form-row">
+        <div class="form-group"><label>Registered Email</label><input value="${currentInstitution.adminEmail || ''}" readonly></div>
+      </div>
+    </div>`;
+  }
+
+  return '';
+}
+
+function showModal(title, body) {
+  document.getElementById('modalTitle').textContent = title;
+  document.getElementById('modalBody').textContent = body;
+  document.getElementById('modalOverlay').classList.add('open');
+}
+function closeModal() {
+  document.getElementById('modalOverlay').classList.remove('open');
+}
+</script>
+</body>
+</html>
