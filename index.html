@@ -1137,6 +1137,15 @@ window.addEventListener('DOMContentLoaded', function () {
   } catch (e) {
     console.error('eJwi startup error:', e);
   }
+  // Check login status automatically on every load, instead of waiting
+  // for the person to tap "Get Started" — if they're already logged in,
+  // skip straight to Home instead of showing the splash/login screens.
+  authReady.then(() => {
+    if (currentUser) {
+      goTo('home');
+    }
+    // If not logged in, just leave them on the splash screen as before.
+  });
 });
 </script>
 
