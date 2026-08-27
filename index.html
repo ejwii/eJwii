@@ -1086,7 +1086,7 @@ async function doSubmit() {
   document.getElementById('successSummary').innerHTML = `
     <div class="summary-row"><span class="k">Type</span><span class="v">${cfg.label}</span></div>
     <div class="summary-row"><span class="k">Health Institution</span><span class="v">${state.hcName}</span></div>
-    <div class="summary-row"><span class="k">Submitted by</span><span class="v">${currentUser.firstName} ${currentUser.lastName}</span></div>
+    <div class="summary-row"><span class="k">Submitted by</span><span class="v">${(currentUser.firstName || currentUser.lastName) ? (currentUser.firstName + ' ' + currentUser.lastName).trim() : currentUser.email}</span></div>
     <div class="summary-row"><span class="k">Date</span><span class="v">${sub.date}, ${sub.time}</span></div>
     <div class="summary-row"><span class="k">Status</span><span class="v" style="color:var(--green);">✅ Received</span></div>
   `;
