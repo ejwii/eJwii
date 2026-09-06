@@ -466,9 +466,34 @@ body{
       <label>Password</label>
       <input type="password" id="loginPass" placeholder="Your password">
     </div>
+    <div class="auth-switch" style="text-align:right;margin-top:-6px;margin-bottom:6px;">
+      <a onclick="goToForgotPassword()">Forgot password?</a>
+    </div>
     <button class="btn-main btn-blue" onclick="doLogin()" style="margin-top:4px;">Sign In →</button>
     <div class="auth-switch">New here? <a onclick="goTo('register')">Create account</a></div>
     <div class="auth-switch" style="margin-top:8px;"><a onclick="goTo('splash')">← Back to home</a></div>
+  </div>
+</div>
+
+<!-- ══════════ FORGOT PASSWORD ══════════ -->
+<div class="screen" id="forgotPassword">
+  <div style="padding:52px 24px 0;">
+    <div class="auth-logo">
+      <div class="auth-logo-icon">🏥</div>
+      <div class="auth-logo-name">e<span>Jwi</span></div>
+    </div>
+    <div class="auth-title">Reset your password</div>
+    <div class="auth-sub">Enter the email you registered with — we'll send you a link to set a new password.</div>
+    <div class="auth-error" id="forgotError">Something went wrong.</div>
+    <div class="auth-error" id="forgotSuccess" style="display:none;background:rgba(16,185,129,.1);border-color:rgba(16,185,129,.3);color:var(--green);"></div>
+  </div>
+  <div class="auth-wrap" style="justify-content:flex-start;padding-top:12px;">
+    <div class="field">
+      <label>Email Address</label>
+      <input type="email" id="forgotEmail" placeholder="your@email.com">
+    </div>
+    <button class="btn-main btn-blue" id="forgotBtn" onclick="doForgotPassword()" style="margin-top:4px;">Send Reset Link →</button>
+    <div class="auth-switch" style="margin-top:8px;"><a onclick="goTo('login')">← Back to sign in</a></div>
   </div>
 </div>
 
@@ -907,6 +932,52 @@ function firebaseErrorMessage(e) {
     case 'auth/invalid-credential': return 'Incorrect email or password.';
     case 'auth/too-many-requests': return 'Too many attempts — please wait a moment and try again.';
     default: return e.message || 'Something went wrong. Please try again.';
+  }
+}
+
+// ══════════════ FORGOT PASSWORD ══════════════
+function goToForgotPassword() {
+  // Pre-fill with whatever the person already typed on the login screen
+  const loginEmail = document.getElementById('loginEmail').value.trim();
+  document.getElementById('forgotEmail').value = loginEmail;
+  document.getElementById('forgotError').style.display = 'none';
+  document.getElementById('forgotSuccess').style.display = 'none';
+  goTo('forgotPassword');
+}
+
+async function doForgotPassword() {
+  const email = document.getElementById('forgotEmail').value.trim().toLowerCase();
+  const errEl = document.getElementById('forgotError');
+  const okEl  = document.getElementById('forgotSuccess');
+  const btn   = document.getElementById('forgotBtn');
+
+  errEl.style.display = 'none';
+  okEl.style.display = 'none';
+
+  if (!email) {
+    errEl.textContent = 'Please enter your email address.';
+    errEl.style.display = 'block'; return;
+  }
+  if (!firebaseReady) {
+    errEl.textContent = 'Could not connect — check your internet connection and try again.';
+    errEl.style.display = 'block'; return;
+  }
+
+  if (btn) { btn.disabled = true; btn.textContent = 'Sending...'; }
+
+  try {
+    await auth.sendPasswordResetEmail(email);
+    okEl.textContent = 'Reset link sent! Check your inbox (and spam folder) at ' + email + '.';
+    okEl.style.display = 'block';
+    document.getElementById('forgotEmail').value = '';
+  } catch (e) {
+    // Note: some Firebase projects are configured to always report success
+    // here (to avoid leaking which emails are registered). If yours does,
+    // this catch block may rarely fire even for unknown emails.
+    errEl.textContent = firebaseErrorMessage(e);
+    errEl.style.display = 'block';
+  } finally {
+    if (btn) { btn.disabled = false; btn.textContent = 'Send Reset Link →'; }
   }
 }
 
