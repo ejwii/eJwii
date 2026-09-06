@@ -171,6 +171,12 @@ button, input, select, textarea { font-family: inherit; }
 .vote-bar { height: 4px; background: var(--gray-100); border-radius: 2px; margin: 7px 0 5px; }
 .vote-fill { height: 100%; border-radius: 2px; }
 .vote-count { font-size: 11.5px; color: var(--gray-600); font-weight: 600; }
+.progress-item { margin-bottom: 15px; }
+.progress-item:last-child { margin-bottom: 0; }
+.progress-header { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; font-size: 13px; margin-bottom: 6px; }
+.progress-header span:first-child { color: var(--gray-800); }
+.progress-track { height: 8px; background: var(--gray-100); border-radius: 4px; overflow: hidden; }
+.progress-fill { height: 100%; border-radius: 4px; transition: width 0.3s; }
 .btn-sm { padding: 6px 13px; border-radius: 7px; font-size: 12px; font-weight: 600; cursor: pointer; border: none; transition: all 0.15s; }
 .btn-blue { background: var(--blue); color: #fff; }
 .btn-blue:hover { background: var(--blue-light); }
@@ -295,18 +301,15 @@ const firebaseConfig = {
   messagingSenderId: "13121909733",
   appId: "1:13121909733:web:9ddb97fa615a611cf5f50c",
 };
-// Named app instance so this portal's login session is fully isolated from
-// the patient app's session, even though both live on ejwii.github.io.
-// Without this, logging into one silently logs you into the other, since
-// browsers share auth storage per-website, not per-folder.
-const institutionApp = firebase.initializeApp(firebaseConfig, 'institutionPortal');
-const auth = institutionApp.auth();
-const db = institutionApp.firestore();
+firebase.initializeApp(firebaseConfig);
+const auth = firebase.auth();
+const db = firebase.firestore();
 
 let currentInstitution = null; // { id, name, sector, district, adminEmail, ... }
 let unsubscribeSubmissions = null;
 let allSubmissions = []; // live submissions for this institution only
 let currentPage = 'dashboard';
+let currentReportData = {}; // saved internal report for the currently viewed period
 
 // ══════════════ LOGIN ══════════════
 async function doLogin() {
@@ -395,14 +398,33 @@ function listenForSubmissions() {
     .onSnapshot(snap => {
       allSubmissions = snap.docs.map(d => ({ id: d.id, ...d.data() }));
       allSubmissions.sort((a,b) => (b.createdAt?.seconds||0) - (a.createdAt?.seconds||0));
-      // Re-render whatever page is currently open so it stays live
-      loadPage(currentPage);
+      // Re-render whatever page is currently open so it stays live.
+      // (Uses refreshCurrentPage, not loadPage, so an in-progress report
+      // edit doesn't get re-fetched/reset every time a submission changes.)
+      refreshCurrentPage();
     }, err => {
       console.error('Failed to load submissions:', err);
     });
 }
 
 function byType(type) { return allSubmissions.filter(s => s.type === type); }
+
+// Groups submissions of a given type by their (trimmed, case-insensitive)
+// text, so patients who picked the same option — e.g. "Long waiting time at
+// consultation" — count as separate reports of the same issue. This is the
+// closest real signal to "votes" we have, since patients don't upvote
+// existing entries; they each submit their own.
+function topReportedIssues(list, limit) {
+  const counts = new Map();
+  list.forEach(s => {
+    const key = (s.text || '').trim().toLowerCase();
+    if (!key) return;
+    if (!counts.has(key)) counts.set(key, { text: s.text.trim(), count: 0 });
+    counts.get(key).count++;
+  });
+  return [...counts.values()].sort((a,b) => b.count - a.count).slice(0, limit || 5);
+}
+
 function timeAgo(sub) {
   if (!sub.createdAt || !sub.createdAt.seconds) return sub.date || '';
   const diffMs = Date.now() - sub.createdAt.seconds * 1000;
@@ -422,12 +444,77 @@ async function updateSubmissionStatus(id, newStatus) {
   }
 }
 
+function refreshCurrentPage() {
+  document.getElementById('mainContent').innerHTML = getPageContent(currentPage);
+}
+
 function loadPage(pageId, el) {
   currentPage = pageId;
   document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
   if (el) el.classList.add('active');
   else { const btn = [...document.querySelectorAll('.nav-item')].find(b => b.textContent.trim().toLowerCase().includes(pageId)); if (btn) btn.classList.add('active'); }
-  document.getElementById('mainContent').innerHTML = getPageContent(pageId);
+  if (pageId === 'report') {
+    // Report content depends on a Firestore fetch, so show a brief loading
+    // state and let loadReportForPeriod() render once it resolves.
+    document.getElementById('mainContent').innerHTML = `<div class="empty-state"><div class="empty-icon">📝</div><p>Loading report…</p></div>`;
+    loadReportForPeriod();
+    return;
+  }
+  refreshCurrentPage();
+}
+
+// ══════════════ INTERNAL REPORT (Firestore) ══════════════
+// One report per institution per calendar month, so re-opening the page
+// later (even from another device) shows what was last saved.
+function getPeriodKey() {
+  const d = new Date();
+  return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0');
+}
+
+function reportDocId() {
+  return currentInstitution.id + '_' + getPeriodKey();
+}
+
+async function loadReportForPeriod() {
+  try {
+    const doc = await db.collection('institutionReports').doc(reportDocId()).get();
+    currentReportData = doc.exists ? doc.data() : {};
+  } catch (e) {
+    console.error('Failed to load report:', e);
+    currentReportData = {};
+  }
+  refreshCurrentPage();
+}
+
+function formatReportTimestamp(ts) {
+  if (!ts || !ts.seconds) return '';
+  return new Date(ts.seconds * 1000).toLocaleString('en-RW', { dateStyle: 'medium', timeStyle: 'short' });
+}
+
+async function saveReport() {
+  const btn = document.getElementById('saveReportBtn');
+  const data = {
+    preparedBy: document.getElementById('reportPreparedBy').value.trim(),
+    complaintsSummary: document.getElementById('reportComplaintsSummary').value,
+    actionsTaken: document.getElementById('reportActionsTaken').value,
+    complimentsSummary: document.getElementById('reportComplimentsSummary').value,
+    period: getPeriodKey(),
+    institutionId: currentInstitution.id,
+    updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
+  };
+
+  if (btn) { btn.disabled = true; btn.textContent = 'Saving...'; }
+  try {
+    await db.collection('institutionReports').doc(reportDocId()).set(data, { merge: true });
+    currentReportData = { ...data, updatedAt: { seconds: Date.now() / 1000 } }; // optimistic, for the "last saved" line
+    showModal('Report Saved', 'Your internal report for this period has been saved. Come back anytime this month to keep editing it.');
+    refreshCurrentPage();
+  } catch (e) {
+    console.error('Failed to save report:', e);
+    showModal('Could Not Save', 'Something went wrong saving this report — check your connection and try again.');
+  } finally {
+    if (btn) { btn.disabled = false; btn.textContent = 'Save Report'; }
+  }
 }
 
 function statusBadge(status) {
@@ -444,7 +531,9 @@ function getPageContent(page) {
 
   if (page === 'dashboard') {
     const total = allSubmissions.length;
-    const maxVotes = 1; // no voting field yet on real submissions
+    const topIssues = topReportedIssues(complaints, 5);
+    const maxIssueCount = topIssues.length ? topIssues[0].count : 1;
+    const issueColor = (i) => i === 0 ? 'var(--red)' : i <= 2 ? 'var(--gold)' : 'var(--green)';
     return `
     <div class="page-header">
       <div><h1>${instName}</h1><p>Institution Dashboard — ${new Date().toLocaleDateString('en-RW',{weekday:'long',year:'numeric',month:'long',day:'numeric'})}</p></div>
@@ -457,12 +546,12 @@ function getPageContent(page) {
     </div>
     <div class="two-col">
       <div class="card">
-        <div class="card-header"><div class="card-title">Recent Complaints</div></div>
-        ${complaints.length === 0 ? `<div class="empty-state"><div class="empty-icon">🎉</div><p>No complaints yet.</p></div>` :
-          complaints.slice(0,5).map(c => `
-          <div class="feedback-item">
-            <div class="feedback-item-top">${statusBadge(c.status)}<span style="font-size:11px;color:var(--gray-400);margin-left:auto;">${timeAgo(c)}</span></div>
-            <div class="feedback-text">${c.text}</div>
+        <div class="card-header"><div class="card-title">Top Reported Issues</div></div>
+        ${topIssues.length === 0 ? `<div class="empty-state"><div class="empty-icon">🎉</div><p>No complaints yet.</p></div>` :
+          topIssues.map((issue,i) => `
+          <div class="progress-item">
+            <div class="progress-header"><span>${issue.text}</span><span style="font-weight:700;">${issue.count} report${issue.count===1?'':'s'}</span></div>
+            <div class="progress-track"><div class="progress-fill" style="width:${Math.round(issue.count/maxIssueCount*100)}%;background:${issueColor(i)};"></div></div>
           </div>`).join('')}
       </div>
       <div class="card">
@@ -476,6 +565,16 @@ function getPageContent(page) {
       </div>
     </div>
     <div class="card">
+      <div class="card-header"><div class="card-title">Recent Complaints</div></div>
+      ${complaints.length === 0 ? `<div class="empty-state"><div class="empty-icon">🎉</div><p>No complaints yet.</p></div>` :
+        complaints.slice(0,5).map(c => `
+        <div class="feedback-item">
+          <div class="feedback-item-top">${statusBadge(c.status)}<span style="font-size:11px;color:var(--gray-400);margin-left:auto;">${timeAgo(c)}</span></div>
+          <div class="feedback-text">${c.text}</div>
+          <div style="font-size:11px;color:var(--gray-400);">From: <strong style="color:var(--gray-600);">${c.patientName || 'Anonymous patient'}</strong></div>
+        </div>`).join('')}
+    </div>
+    <div class="card">
       <div class="card-header"><div class="card-title">Recent Activity</div></div>
       ${allSubmissions.length === 0 ? `<div class="empty-state"><div class="empty-icon">📭</div><p>No submissions yet — nothing to show here.</p></div>` :
         allSubmissions.slice(0,5).map(s => {
@@ -483,6 +582,7 @@ function getPageContent(page) {
           return `<div class="feedback-item">
             <div class="feedback-item-top"><span class="badge badge-${s.type}">${icon} ${s.type.charAt(0).toUpperCase()+s.type.slice(1)}</span><span style="font-size:11px;color:var(--gray-400);margin-left:auto;">${timeAgo(s)}</span></div>
             <div class="feedback-text">${s.text}</div>
+            <div style="font-size:11px;color:var(--gray-400);">From: <strong style="color:var(--gray-600);">${s.patientName || 'Anonymous patient'}</strong></div>
           </div>`;
         }).join('')}
     </div>`;
@@ -547,6 +647,15 @@ function getPageContent(page) {
   }
 
   if (page === 'report') {
+    // Pre-fill from whatever was last saved for this month; only fall back
+    // to an auto-generated bullet summary the first time (before anything's
+    // been saved), so a saved-but-now-empty field doesn't get overwritten.
+    const complaintsSummary = currentReportData.complaintsSummary !== undefined
+      ? currentReportData.complaintsSummary
+      : complaints.slice(0,5).map(c=>'• '+c.text).join('\n');
+    const complimentsSummary = currentReportData.complimentsSummary !== undefined
+      ? currentReportData.complimentsSummary
+      : compliments.slice(0,5).map(c=>'• '+c.text).join('\n');
     return `
     <div class="page-header"><div><h1>Internal Report</h1><p>Summarize this month's feedback for your own records or board — nothing here is sent externally</p></div></div>
     <div class="card">
@@ -554,13 +663,14 @@ function getPageContent(page) {
       <div class="card-title" style="margin-bottom:16px;">Reporting Period: ${new Date().toLocaleDateString('en-RW',{year:'numeric',month:'long'})}</div>
       <div class="form-row">
         <div class="form-group"><label>Institution</label><input value="${instName}" readonly></div>
-        <div class="form-group"><label>Prepared By</label><input placeholder="Name of person preparing this report"></div>
+        <div class="form-group"><label>Prepared By</label><input id="reportPreparedBy" placeholder="Name of person preparing this report" value="${currentReportData.preparedBy || ''}"></div>
       </div>
-      <div class="form-group"><label>Summary of Major Complaints</label><textarea placeholder="Summarize the top complaints raised this month and actions taken...">${complaints.slice(0,5).map(c=>'• '+c.text).join('\n')}</textarea></div>
-      <div class="form-group"><label>Actions Taken</label><textarea placeholder="List specific actions the clinic has taken in response to patient feedback..."></textarea></div>
-      <div class="form-group"><label>Compliments / Positive Feedback Summary</label><textarea placeholder="Summarize positive feedback from patients this month...">${compliments.slice(0,5).map(c=>'• '+c.text).join('\n')}</textarea></div>
+      <div class="form-group"><label>Summary of Major Complaints</label><textarea id="reportComplaintsSummary" placeholder="Summarize the top complaints raised this month and actions taken...">${complaintsSummary}</textarea></div>
+      <div class="form-group"><label>Actions Taken</label><textarea id="reportActionsTaken" placeholder="List specific actions the clinic has taken in response to patient feedback...">${currentReportData.actionsTaken || ''}</textarea></div>
+      <div class="form-group"><label>Compliments / Positive Feedback Summary</label><textarea id="reportComplimentsSummary" placeholder="Summarize positive feedback from patients this month...">${complimentsSummary}</textarea></div>
+      ${currentReportData.updatedAt ? `<div style="font-size:11.5px;color:var(--gray-400);margin-bottom:10px;">Last saved ${formatReportTimestamp(currentReportData.updatedAt)}</div>` : ''}
       <div style="display:flex;gap:10px;margin-top:8px;">
-        <button class="btn-primary" onclick="showModal('Save Report','This report is for your own internal use — copy or print it for your records.')">Save Report</button>
+        <button class="btn-primary" id="saveReportBtn" onclick="saveReport()">Save Report</button>
       </div>
     </div>`;
   }
