@@ -464,20 +464,24 @@ function loadPage(pageId, el) {
 }
 
 // ══════════════ INTERNAL REPORT (Firestore) ══════════════
-// One report per institution per calendar month, so re-opening the page
-// later (even from another device) shows what was last saved.
+// One report per institution per calendar month, stored as a subcollection
+// under the institution itself (institutions/{id}/reports/{period}). This
+// lets the security rule check permission from the URL path — which is
+// always known — instead of needing to read a document that might not
+// exist yet on the very first save of the month.
 function getPeriodKey() {
   const d = new Date();
   return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0');
 }
 
-function reportDocId() {
-  return currentInstitution.id + '_' + getPeriodKey();
+function reportDocRef() {
+  return db.collection('institutions').doc(currentInstitution.id)
+    .collection('reports').doc(getPeriodKey());
 }
 
 async function loadReportForPeriod() {
   try {
-    const doc = await db.collection('institutionReports').doc(reportDocId()).get();
+    const doc = await reportDocRef().get();
     currentReportData = doc.exists ? doc.data() : {};
   } catch (e) {
     console.error('Failed to load report:', e);
@@ -505,7 +509,7 @@ async function saveReport() {
 
   if (btn) { btn.disabled = true; btn.textContent = 'Saving...'; }
   try {
-    await db.collection('institutionReports').doc(reportDocId()).set(data, { merge: true });
+    await reportDocRef().set(data, { merge: true });
     currentReportData = { ...data, updatedAt: { seconds: Date.now() / 1000 } }; // optimistic, for the "last saved" line
     showModal('Report Saved', 'Your internal report for this period has been saved. Come back anytime this month to keep editing it.');
     refreshCurrentPage();
