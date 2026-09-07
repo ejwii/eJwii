@@ -283,6 +283,7 @@ button, input, select, textarea { font-family: inherit; }
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script>
 const NAV = [
   { icon:'📊', label:'Dashboard', page:'dashboard' },
@@ -521,6 +522,56 @@ async function saveReport() {
   }
 }
 
+function downloadReportPdf() {
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF({ unit: 'pt', format: 'a4' });
+  const pageWidth = doc.internal.pageSize.getWidth();
+  const margin = 48;
+  const maxWidth = pageWidth - margin * 2;
+  let y = 60;
+
+  const instName = currentInstitution.name || currentInstitution.id;
+  const periodLabel = new Date().toLocaleDateString('en-RW', { year: 'numeric', month: 'long' });
+  const preparedBy = document.getElementById('reportPreparedBy').value.trim();
+  const complaintsSummary = document.getElementById('reportComplaintsSummary').value.trim();
+  const actionsTaken = document.getElementById('reportActionsTaken').value.trim();
+  const complimentsSummary = document.getElementById('reportComplimentsSummary').value.trim();
+
+  function heading(text) {
+    if (y > 740) { doc.addPage(); y = 60; }
+    doc.setFont('helvetica', 'bold'); doc.setFontSize(12);
+    doc.text(text, margin, y);
+    y += 18;
+  }
+  function paragraph(text) {
+    doc.setFont('helvetica', 'normal'); doc.setFontSize(10.5);
+    const lines = doc.splitTextToSize(text || '—', maxWidth);
+    lines.forEach(line => {
+      if (y > 780) { doc.addPage(); y = 60; }
+      doc.text(line, margin, y);
+      y += 15;
+    });
+    y += 12;
+  }
+
+  doc.setFont('helvetica', 'bold'); doc.setFontSize(18);
+  doc.text('Internal Feedback Report', margin, y); y += 26;
+  doc.setFont('helvetica', 'normal'); doc.setFontSize(11);
+  doc.text(instName, margin, y); y += 16;
+  doc.text('Reporting Period: ' + periodLabel, margin, y); y += 16;
+  doc.text('Prepared By: ' + (preparedBy || '—'), margin, y); y += 28;
+
+  heading('Summary of Major Complaints');
+  paragraph(complaintsSummary);
+  heading('Actions Taken');
+  paragraph(actionsTaken);
+  heading('Compliments / Positive Feedback Summary');
+  paragraph(complimentsSummary);
+
+  const fileSlug = (instName || 'institution').toLowerCase().replace(/[^a-z0-9]+/g, '-');
+  doc.save(`${fileSlug}-report-${getPeriodKey()}.pdf`);
+}
+
 function statusBadge(status) {
   if (status === 'Received — Under review' || status === 'Pending') return `<span class="badge badge-pending">⏳ Pending</span>`;
   if (status === 'In Progress') return `<span class="badge badge-progress">🔄 In Progress</span>`;
@@ -675,6 +726,7 @@ function getPageContent(page) {
       ${currentReportData.updatedAt ? `<div style="font-size:11.5px;color:var(--gray-400);margin-bottom:10px;">Last saved ${formatReportTimestamp(currentReportData.updatedAt)}</div>` : ''}
       <div style="display:flex;gap:10px;margin-top:8px;">
         <button class="btn-primary" id="saveReportBtn" onclick="saveReport()">Save Report</button>
+        <button class="btn-sm" style="background:var(--gray-100);color:var(--gray-800);padding:0 18px;" onclick="downloadReportPdf()">⬇ Download PDF</button>
       </div>
     </div>`;
   }
